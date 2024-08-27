@@ -1,109 +1,169 @@
-let dropArea = document.getElementById("drop-area")
+const dropArea = document.getElementById("drop-area");
+const gallery = document.getElementById('gallery');
+const progressBar = document.getElementById('progress-bar');
+const clearAllButton = document.getElementById('clear-all');
 
 // Prevent default drag behaviors
-;['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-  dropArea.addEventListener(eventName, preventDefaults, false)   
-  document.body.addEventListener(eventName, preventDefaults, false)
-})
+['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+  dropArea.addEventListener(eventName, preventDefaults, false);
+  document.body.addEventListener(eventName, preventDefaults, false);
+});
 
-// Highlight drop area when item is dragged over it
-;['dragenter', 'dragover'].forEach(eventName => {
-  dropArea.addEventListener(eventName, highlight, false)
-})
+// Highlight drop area
+['dragenter', 'dragover'].forEach(eventName => {
+  dropArea.addEventListener(eventName, () => dropArea.classList.add('highlight'), false);
+});
 
-;['dragleave', 'drop'].forEach(eventName => {
-  dropArea.addEventListener(eventName, unhighlight, false)
-})
+['dragleave', 'drop'].forEach(eventName => {
+  dropArea.addEventListener(eventName, () => dropArea.classList.remove('highlight'), false);
+});
 
 // Handle dropped files
-dropArea.addEventListener('drop', handleDrop, false)
+dropArea.addEventListener('drop', handleDrop, false);
 
-function preventDefaults (e) {
-  e.preventDefault()
-  e.stopPropagation()
+gallery.addEventListener('click', handleClick);
+
+clearAllButton.addEventListener('click', clearAllImages);
+
+function clearAllImages() {
+  const images = gallery.querySelectorAll('img');
+
+  images.forEach(img => {
+    if (img.src.startsWith('blob:')) {
+      URL.revokeObjectURL(img.src)
+    }
+  });
+
+  gallery.innerHTML = '';
 }
 
-function highlight(e) {
-  dropArea.classList.add('highlight')
-}
+async function handleClick(e) {
+  if(e.target.className == 'copy') {
+    const src = e.target.parentElement.parentElement.querySelector('img').src
+    const data = await fetch(src)
+    const blob = await data.blob()
 
-function unhighlight(e) {
-  dropArea.classList.remove('active')
-}
+    await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
+    e.target.textContent = 'Copied!'
 
-function handleDrop(e) {
-  var dt = e.dataTransfer
-  var files = dt.files
+  } else if (e.target.className == 'save') {
+    const src = e.target.parentElement.parentElement.querySelector('img').src
 
-  handleFiles(files)
-}
-
-let uploadProgress = []
-let processingButton = document.getElementById('progress-bar')
-
-function initializeProgress() {
-  processingButton.textContent = "Processing..."
-}
-
-function setFinished() {
-  processingButton.textContent = "Done"
-}
-
-function handleFiles(files) {
-  files = [...files]
-  initializeProgress(files.length)
-  files.forEach(uploadFile)
-  files.forEach(previewFile)
-  setFinished()
-}
-
-function previewFile(file) {
-  let reader = new FileReader()
-  reader.readAsDataURL(file)
-  reader.onloadend = function() {
-    let img = document.createElement('img')
-    img.src = reader.result
-    document.getElementById('gallery').appendChild(img)
+    // Interesting trick
+    const a = document.createElement('a');
+    a.href = src;
+    a.download = `image_${Date.now()}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    e.target.textContent = 'Saved!'
   }
 }
 
-function uploadFile(file, i) {
-    var url = 'upload'
-    var xhr = new XMLHttpRequest()
-    var reader = new FileReader()
+function preventDefaults(e) {
+  e.preventDefault();
+  e.stopPropagation();
+}
 
-    reader.onloadend = function() {
-        var base64String = reader.result.split(',')[1];
+function initializeProgress() {
+  progressBar.style.backgroundColor = "#ff6a00"
+  progressBar.textContent = "Processing..."
+}
 
-        var data = JSON.stringify({
-            upload_preset: 'ujpu6gyk',
-            file: base64String,
-            filename: file.name,
-            content_type: file.type
-        });
+function setFinished() {
+  progressBar.style.backgroundColor = "#006900"
+  progressBar.textContent = "Done"
+}
 
-        xhr.open('POST', url, true)
-        xhr.setRequestHeader('Content-Type', 'application/json');
-        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest')
+async function handleDrop(e) {
+  const files = Array.from(e.dataTransfer.files);
+  initializeProgress();
+  await Promise.all(files.map(uploadAndPreviewFile));
+  setFinished();
+}
 
-        xhr.responseType = 'blob'
+function previewFile(file) {
+  return new Promise((resolve) => {
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      const img = document.createElement('img')
+      img.src = reader.result
+      img.dataset.fileName = file.name
 
-        xhr.addEventListener('readystatechange', function(e) {
-            if (xhr.readyState == 4 && xhr.status == 200) {
-              var blob = xhr.response
-              var imgURL = URL.createObjectURL(blob);
-              var imgElement = document.createElement('img');
-              imgElement.src = imgURL;
-              document.getElementById('gallery').appendChild(imgElement);
-            }
-            else if (xhr.readyState == 4 && xhr.status != 200) {
-              console.error("Something went wrong!")
-            }
-        })
+      // Add overlay buttons
+      const container = document.createElement('div')
+      container.className = 'image-container'
+      container.appendChild(img)
 
-        xhr.send(data)
-    }
+      const buttonsDiv = document.createElement('div')
+      buttonsDiv.className = 'overlay-buttons'
 
+      const copyButton = document.createElement('div')
+      copyButton.textContent = 'Copy'
+      copyButton.className = 'copy'
+
+      const saveButton = document.createElement('div')
+      saveButton.textContent = 'Save'
+      saveButton.className = 'save'
+
+      buttonsDiv.appendChild(copyButton)
+      buttonsDiv.appendChild(saveButton)
+      container.appendChild(buttonsDiv)
+
+      gallery.appendChild(container);
+      resolve(file.name);
+    };
     reader.readAsDataURL(file);
+  });
+}
 
+async function uploadFile(file) {
+  const url = 'upload';
+  const base64String = await new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      resolve(reader.result.split(',')[1]);
+    };
+    reader.readAsDataURL(file);
+  });
+
+  const data = JSON.stringify({
+    file: base64String,
+    filename: file.name,
+    content_type: file.type
+  });
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest'
+    },
+    body: data
+  });
+
+  if (!response.ok) {
+    throw new Error('Network response was not ok');
+  }
+
+  return response.blob();
+}
+
+async function uploadAndPreviewFile(file) {
+  try {
+    await previewFile(file);
+    const blob = await uploadFile(file);
+    const imgURL = URL.createObjectURL(blob);
+    const imgElement = document.querySelector(`img[data-file-name="${file.name}"]`);
+
+    if (imgElement) {
+      if (imgElement.dataset.src) {
+        URL.revokeObjectURL(imgElement.dataset.src)
+      }
+
+      imgElement.src = imgURL; // Update the image source
+    }
+  } catch (error) {
+    console.error("Something went wrong!", error);
+  }
 }
