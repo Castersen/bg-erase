@@ -35,15 +35,9 @@ START_PAGE = 'index.html'
 class ManPageHandler(SimpleHTTPRequestHandler):
     protocol_version = 'HTTP/1.1'
 
-    def __send_200_headers(self, length: int):
+    def __send_200_headers(self, length: int, type='text/html; charset=UTF-8'):
         self.send_response(HTTPStatus.OK)
-        self.send_header('Content-Type', 'text/html; charset=UTF-8')
-        self.send_header('Content-Length', str(length))
-        self.end_headers()
-
-    def __send_200_headers_image(self, length: int):
-        self.send_response(HTTPStatus.OK)
-        self.send_header('Content-Type', 'image/png')
+        self.send_header('Content-Type', type)
         self.send_header('Content-Length', str(length))
         self.end_headers()
 
@@ -57,18 +51,14 @@ class ManPageHandler(SimpleHTTPRequestHandler):
         self.__send_200_headers(len(payload))
         self.wfile.write(payload)
 
-    def __get_name(self) -> str:
-        return Path(self.path).name
-
     def do_GET(self):
         if self.path == '/favicon.ico':
             self.send_response(HTTPStatus.NOT_FOUND)
             self.end_headers()
         elif self.path.endswith('.css') or self.path.endswith('.js'):
-            self.__send_page(self.__get_name())
+            self.__send_page(Path(self.path).name)
         else:
             self.__send_page(START_PAGE)
-            return
 
     def do_POST(self):
         try:
@@ -91,7 +81,7 @@ class ManPageHandler(SimpleHTTPRequestHandler):
             no_bg_image.save(client_image, format="PNG", compress_level=1)
             image_bytes = client_image.getvalue()
 
-            self.__send_200_headers_image(len(image_bytes))
+            self.__send_200_headers(len(image_bytes), type='image/png')
             self.wfile.write(image_bytes)
         except Exception as e:
             print(f'Error processing image: {e}')
@@ -106,9 +96,7 @@ def main():
     parser.add_argument('-i', '--host', type=str, help='Set host')
     parser.add_argument('-a', '--allow', action='store_true', help='Allow reuse of address')
 
-
     args = parser.parse_args()
-
     if (args.port):
         port = args.port
     if (args.host):
