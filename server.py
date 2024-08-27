@@ -54,33 +54,23 @@ class ManPageHandler(SimpleHTTPRequestHandler):
 
     def do_POST(self):
         try:
-            st = time.time()
             post_data = self.rfile.read(int(self.headers['Content-Length']))
             data = json.loads(post_data)
 
             image = Image.open(py_io.BytesIO(base64.b64decode(data['file'])))
             size = image.size[::-1]
-            print(f'Time to get and convert data: {time.time() - st}')
 
             pd = preprocess_image(np.array(image), [1024, 1024]).to(DEVICE)
-
-            st = time.time()
             inf = MODEL(pd)
-            print(f'Time to run model: {time.time() - st}')
-
             result_image = postprocess_image(inf[0][0], size)
 
-            st = time.time()
             pi = Image.fromarray(result_image)
             no_bg_image = Image.new('RGBA', pi.size, (0,0,0,0))
             no_bg_image.paste(image, mask=pi)
-            print(f'Time to generate mask: {time.time() - st}')
 
-            st = time.time()
             client_image = py_io.BytesIO()
             no_bg_image.save(client_image, format="PNG", compress_level=1)
             image_bytes = client_image.getvalue()
-            print(f'Time to generate bytes: {time.time() - st}')
 
             self.__send_200_headers_image(len(image_bytes))
             self.wfile.write(image_bytes)
