@@ -1,0 +1,36 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="drop-box.css">
+</head>
+<body>
+    <div id="container">
+        <div id="header-container">
+            <div id="header">
+                Remove Background Python
+            </div>
+            <div id="sub-header">
+                Uses Python 🐍 powered by <a href="https://huggingface.co/briaai/RMBG-1.4">briaai/BRIA-RMBG-1.4 model 🤗</a>
+            </div>
+        </div>
+        <div id="drop-area">
+            <form class="my-form">
+                <p>Drag and drop some images here</p>
+                <input type="file" id="fileElem" multiple accept="image/*" onchange="handleFiles(this.files)">
+                <label id="file-selector" for="fileElem">or click to select files</label>
+            </form>
+        </div>
+        <div id="buttons-container">
+            <div id="progress-bar">Convert</div>
+            <!-- <div id="zip-clear-container">
+                <div id="zip-download">Download as ZIP</div>
+                <div id="clear-all">Clear All</div>
+            </div> -->
+        </div>
+        <div id="gallery"></div>
+    </div>
+    <script src="drop-box.js"></script>
+</body>
+</html>
