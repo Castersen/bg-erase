@@ -154,3 +154,31 @@ body {
 #fileElem {
   display: none;
 }
+
+@media screen and (max-width: 1020px) {
+  body {
+    max-width: 660px;
+  }
+
+  #gallery .image-container {
+    margin-left: 0px;
+  }
+}
+
+@media screen and (max-width: 670px) {
+  body {
+    max-width: 300px;
+  }
+
+  #header {
+    font-size: 20px;
+  }
+
+  #sub-header {
+    font-size: 15px;
+  }
+
+  .my-form p {
+    font-size: 15px;
+  }
+}
