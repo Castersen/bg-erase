@@ -15,6 +15,7 @@ import torch.nn.functional as F
 from torchvision.transforms.functional import normalize
 import numpy as np
 
+print('Loading model this might take a while...')
 MODEL = AutoModelForImageSegmentation.from_pretrained("briaai/RMBG-1.4",trust_remote_code=True)
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 MODEL.to(DEVICE)
