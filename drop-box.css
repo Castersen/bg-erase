@@ -80,6 +80,18 @@ body {
   border-radius: 7px;
 }
 
+#progress-bar.progress {
+  background-color: #ff6a00;
+}
+
+#progress-bar.done {
+  background-color: #006900
+}
+
+#progress-bar.error {
+  background-color: #ff0000
+}
+
 #clear-all {
   color: white;
   background-color: #ff1f1f;

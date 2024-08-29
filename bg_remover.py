@@ -11,6 +11,7 @@ class ImageProcessor:
         print('Loading model this might take a while...')
         self.model = AutoModelForImageSegmentation.from_pretrained("briaai/RMBG-1.4",trust_remote_code=True)
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        print(f'Using {self.device}')
         self.model.to(self.device)
         self.model.eval()
 
@@ -22,8 +23,7 @@ class ImageProcessor:
     def postprocess_image(self, result: torch.Tensor, im_size: list)-> np.ndarray:
         result = F.interpolate(result, size=im_size, mode='bilinear').squeeze(0)
         result = (result - result.min()) / (result.max()-result.min())
-        im_array = (result * 255).byte().permute(1,2,0).cpu().numpy().squeeze()
-        return im_array
+        return (result * 255).byte().permute(1,2,0).cpu().numpy().squeeze()
 
     def get_image_bytes(self, image_bytes: bytes) -> bytes:
         with Image.open(io.BytesIO(image_bytes)) as image:

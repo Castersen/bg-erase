@@ -20,7 +20,7 @@ class ManPageHandler(SimpleHTTPRequestHandler):
         self.send_header('Content-Length', str(length))
         self.end_headers()
 
-    @lru_cache(maxsize=32)
+    # @lru_cache(maxsize=32)
     def __get_page(self, page) -> bytes:
         with open(page, 'r') as fr:
             return fr.read().encode('utf-8')

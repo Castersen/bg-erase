@@ -1,96 +1,107 @@
-const dropArea = document.getElementById("drop-area");
-const gallery = document.getElementById('gallery');
-const progressBar = document.getElementById('progress-bar');
-const clearAllButton = document.getElementById('clear-all');
+const dropArea = document.getElementById("drop-area")
+const gallery = document.getElementById('gallery')
+const progressBar = document.getElementById('progress-bar')
+const clearAllButton = document.getElementById('clear-all')
 
-// Prevent default drag behaviors
-['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-  dropArea.addEventListener(eventName, preventDefaults, false);
-  document.body.addEventListener(eventName, preventDefaults, false);
-});
+const HIGHLIGHT = 'highlight'
+const dragEvents = ['dragenter', 'dragover', 'dragleave', 'drop']
 
-// Highlight drop area
-['dragenter', 'dragover'].forEach(eventName => {
-  dropArea.addEventListener(eventName, () => dropArea.classList.add('highlight'), false);
-});
+for (let eventName of dragEvents) {
+  dropArea.addEventListener(eventName, preventDefaults, false)
+  document.body.addEventListener(eventName, preventDefaults, false)
 
-['dragleave', 'drop'].forEach(eventName => {
-  dropArea.addEventListener(eventName, () => dropArea.classList.remove('highlight'), false);
-});
+  if (eventName == 'dragenter' || eventName == 'dragover')
+    dropArea.addEventListener(eventName, () => {dropArea.classList.add(HIGHLIGHT)})
+  if (eventName == 'dragleave' || eventName == 'drop')
+    dropArea.addEventListener(eventName, () => {dropArea.classList.remove(HIGHLIGHT)})
+}
 
-// Handle dropped files
-dropArea.addEventListener('drop', handleDrop, false);
+dropArea.addEventListener('drop', handleDrop)
+gallery.addEventListener('click', handleClick)
+clearAllButton.addEventListener('click', clearAllImages)
 
-gallery.addEventListener('click', handleClick);
+async function handleDrop(event) {
+  const images = Array.from(event.dataTransfer.files)
 
-clearAllButton.addEventListener('click', clearAllImages);
-
-function clearAllImages() {
-  const images = gallery.querySelectorAll('img');
-
-  images.forEach(img => {
-    if (img.src.startsWith('blob:')) {
-      URL.revokeObjectURL(img.src)
+  for (let image of images) {
+    if (!image.type.startsWith('image')) {
+      setProgressBar('error', 'Only Images Allowed')
+      return
     }
-  });
-
-  gallery.innerHTML = '';
-}
-
-async function handleClick(e) {
-  if(e.target.className == 'copy') {
-    const src = e.target.parentElement.parentElement.querySelector('img').src
-    const data = await fetch(src)
-    const blob = await data.blob()
-
-    await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
-    e.target.textContent = 'Copied!'
-
-  } else if (e.target.className == 'save') {
-    const src = e.target.parentElement.parentElement.querySelector('img').src
-
-    // Interesting trick
-    const a = document.createElement('a');
-    a.href = src;
-    a.download = `image_${Date.now()}.png`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    e.target.textContent = 'Saved!'
   }
+  setProgressBar('progress', 'Processing...')
+  await Promise.all(images.map(uploadAndPreviewFile))
+  setProgressBar('done', 'Done')
 }
 
-function preventDefaults(e) {
-  e.preventDefault();
-  e.stopPropagation();
+function setProgressBar(className, text) {
+  progressBar.classList = []
+  progressBar.classList.add(className)
+  progressBar.textContent = text
 }
 
-function initializeProgress() {
-  progressBar.style.backgroundColor = "#ff6a00"
-  progressBar.textContent = "Processing..."
-}
-
-function setFinished() {
-  progressBar.style.backgroundColor = "#006900"
-  progressBar.textContent = "Done"
-}
-
-async function handleDrop(e) {
-  const files = Array.from(e.dataTransfer.files);
-  initializeProgress();
-  await Promise.all(files.map(uploadAndPreviewFile));
-  setFinished();
+async function uploadAndPreviewFile(file) {
+    const uuid = await previewFile(file)
+    const blob = await uploadFile(file)
+    const imgURL = URL.createObjectURL(blob)
+    const imgElement = document.querySelector(`img[data-file-name="${uuid}"]`)
+    imgElement.src = imgURL
 }
 
 function previewFile(file) {
   return new Promise((resolve) => {
     const reader = new FileReader()
-    reader.onloadend = () => {
-      const img = document.createElement('img')
-      img.src = reader.result
-      img.dataset.fileName = file.name
 
-      // Add overlay buttons
+    reader.onloadend = () => {
+      const uuid = window.crypto.randomUUID()
+      gallery.appendChild(createImageElement(reader.result, uuid))
+      resolve(uuid)
+    }
+
+    reader.readAsDataURL(file)
+  })
+}
+
+async function uploadFile(file) {
+  const url = 'upload'
+
+  const base64String = await new Promise((resolve) => {
+    const reader = new FileReader()
+
+    reader.onloadend = () => {
+      resolve(reader.result.split(',')[1])
+    }
+
+    reader.readAsDataURL(file)
+  })
+
+  const data = JSON.stringify({
+    file: base64String,
+    filename: file.name,
+    content_type: file.type
+  })
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest'
+    },
+    body: data
+  });
+
+  if (!response.ok) {
+    throw new Error('Network response was not ok');
+  }
+
+  return response.blob();
+}
+
+function createImageElement(src, name) {
+      const img = document.createElement('img')
+      img.src = src
+      img.dataset.fileName = name
+
       const container = document.createElement('div')
       container.className = 'image-container'
       container.appendChild(img)
@@ -110,60 +121,44 @@ function previewFile(file) {
       buttonsDiv.appendChild(saveButton)
       container.appendChild(buttonsDiv)
 
-      gallery.appendChild(container);
-      resolve(file.name);
-    };
-    reader.readAsDataURL(file);
-  });
+      return container
 }
 
-async function uploadFile(file) {
-  const url = 'upload';
-  const base64String = await new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      resolve(reader.result.split(',')[1]);
-    };
-    reader.readAsDataURL(file);
-  });
-
-  const data = JSON.stringify({
-    file: base64String,
-    filename: file.name,
-    content_type: file.type
-  });
-
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Requested-With': 'XMLHttpRequest'
-    },
-    body: data
-  });
-
-  if (!response.ok) {
-    throw new Error('Network response was not ok');
-  }
-
-  return response.blob();
+function preventDefaults(event) {
+  event.preventDefault()
+  event.stopPropagation()
 }
 
-async function uploadAndPreviewFile(file) {
-  try {
-    await previewFile(file);
-    const blob = await uploadFile(file);
-    const imgURL = URL.createObjectURL(blob);
-    const imgElement = document.querySelector(`img[data-file-name="${file.name}"]`);
+function clearAllImages() {
+  const images = gallery.querySelectorAll('img')
 
-    if (imgElement) {
-      if (imgElement.dataset.src) {
-        URL.revokeObjectURL(imgElement.dataset.src)
-      }
-
-      imgElement.src = imgURL; // Update the image source
+  images.forEach(img => {
+    if (img.src.startsWith('blob:')) {
+      URL.revokeObjectURL(img.src)
     }
-  } catch (error) {
-    console.error("Something went wrong!", error);
+  });
+
+  gallery.innerHTML = '';
+}
+
+async function handleClick(e) {
+  if(e.target.className == 'copy') {
+    const src = e.target.parentElement.parentElement.querySelector('img').src
+    const data = await fetch(src)
+    const blob = await data.blob()
+
+    await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
+    e.target.textContent = 'Copied!'
+  } else if (e.target.className == 'save') {
+    const src = e.target.parentElement.parentElement.querySelector('img').src
+
+    // Interesting trick
+    const a = document.createElement('a');
+    a.href = src;
+    a.download = `image_${Date.now()}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    e.target.textContent = 'Saved!'
   }
 }
