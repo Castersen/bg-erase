@@ -41,36 +41,24 @@ function setProgressBar(className, text) {
 }
 
 async function uploadAndPreviewFile(file) {
-    const uuid = await previewFile(file)
-    await uploadFile(file, uuid)
+    const [base64String, uuid] = await previewFile(file)
+    await uploadFile(file, uuid, base64String)
 }
 
 function previewFile(file) {
   return new Promise((resolve) => {
     const reader = new FileReader()
-
     reader.onloadend = () => {
       const uuid = window.crypto.randomUUID()
       gallery.appendChild(createImageElement(reader.result, uuid))
-      resolve(uuid)
+      resolve([reader.result.split(',')[1], uuid])
     }
-
     reader.readAsDataURL(file)
   })
 }
 
-async function uploadFile(file, uuid) {
+async function uploadFile(file, uuid, base64String) {
   const url = 'upload'
-
-  const base64String = await new Promise((resolve) => {
-    const reader = new FileReader()
-
-    reader.onloadend = () => {
-      resolve(reader.result.split(',')[1])
-    }
-
-    reader.readAsDataURL(file)
-  })
 
   const data = JSON.stringify({
     file: base64String,
@@ -95,9 +83,8 @@ async function uploadFile(file, uuid) {
 
   const reader = new FileReader()
   reader.onloadend = () => {
-    const base64FinalImage = reader.result
     const imgElement = document.querySelector(`img[data-file-name="${uuid}"]`)
-    imgElement.src = base64FinalImage
+    imgElement.src = reader.result
   }
   reader.readAsDataURL(blob)
 }
@@ -154,7 +141,7 @@ async function saveAllImages(e) {
     return
   }
 
-  const zip = new JSZip();
+  const zip = new JSZip()
 
   for (let image of images) {
     const response = await fetch(image.src)
