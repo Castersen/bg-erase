@@ -22,13 +22,13 @@ dropArea.addEventListener('dragover', (e) => dropArea.classList.add(HIGHLIGHT))
 dropArea.addEventListener('dragleave', (e) => dropArea.classList.remove(HIGHLIGHT))
 dropArea.addEventListener('drop', (e) => dropArea.classList.remove(HIGHLIGHT))
 
-dropArea.addEventListener('drop', handleDrop)
+dropArea.addEventListener('drop', (event) => handleFiles(event.dataTransfer.files))
 gallery.addEventListener('click', handleClick)
 clearAllButton.addEventListener('click', clearAllImages)
 saveAllButton.addEventListener('click', saveAllImages)
 
-async function handleDrop(event) {
-  const images = Array.from(event.dataTransfer.files)
+async function handleFiles(files) {
+  const images = Array.from(files)
 
   if (images.some(image => !image.type.startsWith('image'))) {
     setProgressBar(ERROR, 'Only Images Allowed')
