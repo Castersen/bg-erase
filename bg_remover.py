@@ -26,6 +26,9 @@ def load_onnx_model(repo_name: str, cache_dir: str = ONNX_CACHE_DIR) -> ort.Infe
     return ort.InferenceSession(str(cached_model_path))
 
 def preprocess_image(im: np.ndarray, model_input_size: list) -> torch.Tensor:
+    if len(im.shape) < 3:
+        im = im[:, :, np.newaxis]
+
     im_tensor = torch.tensor(im, dtype=torch.float32).permute(2, 0, 1).unsqueeze(0)
     im_tensor = F.interpolate(im_tensor, size=model_input_size, mode='bilinear')
     return normalize(im_tensor / 255.0, [0.5, 0.5, 0.5], [1.0, 1.0, 1.0])
