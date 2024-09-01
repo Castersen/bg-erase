@@ -72,12 +72,14 @@ body {
 }
 
 #progress-bar {
-  background-color: #333333;
   color: white;
   font-weight: bold;
   font-size: 20px;
   padding: 10px;
   border-radius: 7px;
+  width: 200px;
+  text-align: center;
+  background-color: #333333;
 }
 
 #progress-bar.progress {
@@ -92,19 +94,34 @@ body {
   background-color: #ff0000
 }
 
-#clear-all {
+#buttons-container .button {
   color: white;
-  background-color: #ff1f1f;
   font-weight: bold;
   font-size: 20px;
-  margin-left: 15px;
   padding: 10px;
   border-radius: 7px;
+  width: 200px;
+  text-align: center;
+}
+
+#clear-all {
+  background-color: #ff1f1f;
+  margin-left: 15px;
 }
 
 #clear-all:hover {
   cursor: pointer;
   background-color: #fa0505;
+}
+
+#save-all {
+  background-color: #5f00ff;
+  margin-left: 15px;
+}
+
+#save-all:hover {
+  cursor: pointer;
+  background-color: #4b01c9;
 }
 
 #gallery {
@@ -173,7 +190,7 @@ body {
   }
 
   #gallery .image-container {
-    margin-left: 0px;
+    margin-left: 15px;
   }
 }
 
@@ -186,11 +203,29 @@ body {
     font-size: 20px;
   }
 
+  #buttons-container {
+    margin-bottom: 20px;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  #clear-all {
+    margin-left: 0px;
+  }
+
+  #save-all {
+    margin-left: 0px;
+  }
+
   #sub-header {
     font-size: 15px;
   }
 
   .my-form p {
     font-size: 15px;
+  }
+
+  #gallery .image-container {
+    margin-left: 0px;
   }
 }

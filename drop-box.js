@@ -2,6 +2,7 @@ const dropArea = document.getElementById("drop-area")
 const gallery = document.getElementById('gallery')
 const progressBar = document.getElementById('progress-bar')
 const clearAllButton = document.getElementById('clear-all')
+const saveAllButton = document.getElementById('save-all')
 
 const HIGHLIGHT = 'highlight'
 const dragEvents = ['dragenter', 'dragover', 'dragleave', 'drop']
@@ -9,43 +10,39 @@ const dragEvents = ['dragenter', 'dragover', 'dragleave', 'drop']
 for (let eventName of dragEvents) {
   dropArea.addEventListener(eventName, preventDefaults, false)
   document.body.addEventListener(eventName, preventDefaults, false)
-
-  if (eventName == 'dragenter' || eventName == 'dragover')
-    dropArea.addEventListener(eventName, () => {dropArea.classList.add(HIGHLIGHT)})
-  if (eventName == 'dragleave' || eventName == 'drop')
-    dropArea.addEventListener(eventName, () => {dropArea.classList.remove(HIGHLIGHT)})
 }
+
+dropArea.addEventListener('dragenter', () => dropArea.classList.add(HIGHLIGHT))
+dropArea.addEventListener('dragover', () => dropArea.classList.add(HIGHLIGHT))
+dropArea.addEventListener('dragleave', () => dropArea.classList.remove(HIGHLIGHT))
+dropArea.addEventListener('drop', () => dropArea.classList.remove(HIGHLIGHT))
 
 dropArea.addEventListener('drop', handleDrop)
 gallery.addEventListener('click', handleClick)
 clearAllButton.addEventListener('click', clearAllImages)
+saveAllButton.addEventListener('click', saveAllImages)
 
 async function handleDrop(event) {
   const images = Array.from(event.dataTransfer.files)
 
-  for (let image of images) {
-    if (!image.type.startsWith('image')) {
-      setProgressBar('error', 'Only Images Allowed')
-      return
-    }
+  if (images.some(image => !image.type.startsWith('image'))) {
+    setProgressBar('error', 'Only Images Allowed')
+    return
   }
+
   setProgressBar('progress', 'Processing...')
   await Promise.all(images.map(uploadAndPreviewFile))
   setProgressBar('done', 'Done')
 }
 
 function setProgressBar(className, text) {
-  progressBar.classList = []
-  progressBar.classList.add(className)
+  progressBar.className = className
   progressBar.textContent = text
 }
 
 async function uploadAndPreviewFile(file) {
     const uuid = await previewFile(file)
-    const blob = await uploadFile(file)
-    const imgURL = URL.createObjectURL(blob)
-    const imgElement = document.querySelector(`img[data-file-name="${uuid}"]`)
-    imgElement.src = imgURL
+    await uploadFile(file, uuid)
 }
 
 function previewFile(file) {
@@ -62,7 +59,7 @@ function previewFile(file) {
   })
 }
 
-async function uploadFile(file) {
+async function uploadFile(file, uuid) {
   const url = 'upload'
 
   const base64String = await new Promise((resolve) => {
@@ -88,40 +85,33 @@ async function uploadFile(file) {
       'X-Requested-With': 'XMLHttpRequest'
     },
     body: data
-  });
+  })
 
   if (!response.ok) {
     throw new Error('Network response was not ok');
   }
 
-  return response.blob();
+  const blob = await response.blob()
+
+  const reader = new FileReader()
+  reader.onloadend = () => {
+    const base64FinalImage = reader.result
+    const imgElement = document.querySelector(`img[data-file-name="${uuid}"]`)
+    imgElement.src = base64FinalImage
+  }
+  reader.readAsDataURL(blob)
 }
 
 function createImageElement(src, name) {
-      const img = document.createElement('img')
-      img.src = src
-      img.dataset.fileName = name
+  const container = document.createElement('div')
+  container.className = 'image-container'
+  container.innerHTML = `<img src=${src} data-file-name=${name}>
+                         <div class="overlay-buttons">
+                            <div class="copy">Copy</div>
+                            <div class="save">Save</div>
+                         </div>`
 
-      const container = document.createElement('div')
-      container.className = 'image-container'
-      container.appendChild(img)
-
-      const buttonsDiv = document.createElement('div')
-      buttonsDiv.className = 'overlay-buttons'
-
-      const copyButton = document.createElement('div')
-      copyButton.textContent = 'Copy'
-      copyButton.className = 'copy'
-
-      const saveButton = document.createElement('div')
-      saveButton.textContent = 'Save'
-      saveButton.className = 'save'
-
-      buttonsDiv.appendChild(copyButton)
-      buttonsDiv.appendChild(saveButton)
-      container.appendChild(buttonsDiv)
-
-      return container
+  return container
 }
 
 function preventDefaults(event) {
@@ -130,15 +120,8 @@ function preventDefaults(event) {
 }
 
 function clearAllImages() {
-  const images = gallery.querySelectorAll('img')
-
-  images.forEach(img => {
-    if (img.src.startsWith('blob:')) {
-      URL.revokeObjectURL(img.src)
-    }
-  });
-
   gallery.innerHTML = '';
+  setProgressBar('', 'Status')
 }
 
 async function handleClick(e) {
@@ -161,4 +144,35 @@ async function handleClick(e) {
     document.body.removeChild(a);
     e.target.textContent = 'Saved!'
   }
+}
+
+async function saveAllImages(e) {
+  const images = gallery.querySelectorAll('img');
+
+  if (images.length == 0) {
+    setProgressBar('error', 'No images to zip')
+    return
+  }
+
+  const zip = new JSZip();
+
+  for (let image of images) {
+    const response = await fetch(image.src)
+    const blob = await response.blob()
+    const fileName = `image_${image.attributes['data-file-name'].nodeValue}.png`
+
+    zip.file(fileName, blob)
+  }
+
+  zip.generateAsync({ type: 'blob' })
+    .then((content) => {
+      const a = document.createElement('a')
+      a.href = URL.createObjectURL(content)
+      a.download = 'images.zip'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+
+      URL.revokeObjectURL(a.href)
+    });
 }
