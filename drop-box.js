@@ -81,7 +81,7 @@ async function uploadFile(file, uuid, base64String) {
   })
 
   if (!response.ok) {
-    throw new Error('Network response was not ok');
+    throw new Error('Network response was not ok')
   }
 
   const blob = await response.blob()
@@ -127,7 +127,7 @@ async function handleClick(e) {
       await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
       e.target.textContent = 'Copied!'
     } else {
-      saveImage(`image_${img.attributes['data-file-name'].nodeValue}.png`, blob)
+      saveImage(getImageName(img), blob)
       e.target.textContent = 'Saved!'
     }
   }
@@ -146,7 +146,7 @@ async function saveAllImages(e) {
 
   for (let image of images) {
     const blob = await (await fetch(image.src)).blob()
-    const fileName = `image_${image.attributes['data-file-name'].nodeValue}.png`
+    const fileName = getImageName(image)
 
     zip.file(fileName, blob)
   }
@@ -154,6 +154,10 @@ async function saveAllImages(e) {
   const content = await zip.generateAsync({ type: 'blob' })
   saveImage('images.zip', content)
   setProgressBar(DONE, 'Downloaded zip')
+}
+
+function getImageName(image) {
+  return `image_${image.attributes['data-file-name'].nodeValue}.png`
 }
 
 function saveImage(url, content) {
