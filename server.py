@@ -6,6 +6,7 @@ from functools import lru_cache
 from pathlib import Path
 import json
 import base64
+import mimetypes
 from bg_remover import BaseImageProcessor, ONNXImageProcessor, TorchImageProcessor, run_model
 
 START_PAGE = 'index.html'
@@ -17,7 +18,8 @@ class BGRemoverHandler(SimpleHTTPRequestHandler):
         self.processor = processor
         super().__init__(*args, **kwargs)
 
-    def __send_200_headers(self, length: int, type='text/html; charset=UTF-8'):
+    def __send_200_headers(self, length: int, type: str):
+        type = 'text/html; charset=UTF-8' if not type else type + '; charset=UTF-8'
         self.send_response(HTTPStatus.OK)
         self.send_header('Content-Type', type)
         self.send_header('Content-Length', str(length))
@@ -30,7 +32,8 @@ class BGRemoverHandler(SimpleHTTPRequestHandler):
 
     def __send_page(self, page) -> None:
         payload = self.__get_page(page)
-        self.__send_200_headers(len(payload))
+        mimetype, _ = mimetypes.guess_type(page, strict=True)
+        self.__send_200_headers(len(payload), type=mimetype)
         self.wfile.write(payload)
 
     def do_GET(self):
