@@ -55,10 +55,11 @@ def main():
     parser.add_argument('-p', '--port', type=int, default=8001, help='Set port')
     parser.add_argument('-i', '--host', type=str, default='localhost', help='Set host')
     parser.add_argument('-a', '--allow-reuse', action='store_true', help='Allow reuse of address')
-    parser.add_argument('-o', '--onnx', action='store_true', help='Run model using on cpu using onnx runtime')
+    parser.add_argument('-o', '--onnx', action='store_true', help='Run full onnx model on cpu')
+    parser.add_argument('-q', '--onnx-quantized', action='store_true', help='Run quantized onnx model on cpu')
 
     args = parser.parse_args()
-    processor = ONNXImageProcessor() if args.onnx else TorchImageProcessor()
+    processor = ONNXImageProcessor(args.onnx_quantized) if args.onnx or args.onnx_quantized else TorchImageProcessor()
 
     class ThreadingTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
         daemon_threads = True

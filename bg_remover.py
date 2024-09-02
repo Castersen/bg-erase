@@ -12,12 +12,13 @@ import onnxruntime as ort
 
 ONNX_CACHE_DIR = 'onnx_cache'
 
-def load_onnx_model(repo_name: str, cache_dir: str = ONNX_CACHE_DIR) -> ort.InferenceSession:
-    model_filename = f"{repo_name.replace('/', '_')}_quantized.onnx"
+def load_onnx_model(repo_name: str, quantized: bool, cache_dir: str = ONNX_CACHE_DIR) -> ort.InferenceSession:
+    model_filename = f"{repo_name.replace('/', '_')}_{'quantized' if quantized else 'model'}.onnx"
     cached_model_path = Path(cache_dir) / model_filename
 
     if not cached_model_path.exists():
-        model_url = f'https://huggingface.co/{repo_name}/resolve/main/onnx/model_quantized.onnx'
+        model_type = 'model_quantized.onnx' if quantized else 'model.onnx'
+        model_url = f'https://huggingface.co/{repo_name}/resolve/main/onnx/{model_type}'
         print(f'Downloading model from {model_url}')
         response = requests.get(model_url)
         response.raise_for_status()
@@ -42,9 +43,9 @@ class BaseImageProcessor:
         pass
 
 class ONNXImageProcessor(BaseImageProcessor):
-    def __init__(self):
-        print('Loading quantized onnx model')
-        self.model = load_onnx_model('briaai/RMBG-1.4')
+    def __init__(self, quantized: bool):
+        print(f"Loading {'quantized' if quantized else ''} onnx model")
+        self.model = load_onnx_model('briaai/RMBG-1.4', quantized)
 
     def do_inference(self, image, image_size, model_size):
         preprocessed_image = preprocess_image(image, model_size)
