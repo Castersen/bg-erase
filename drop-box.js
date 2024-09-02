@@ -54,7 +54,7 @@ function previewFile(file) {
   return new Promise((resolve) => {
     const reader = new FileReader()
     reader.onloadend = () => {
-      const uuid = window.crypto.randomUUID()
+      const uuid = uuidv4()
       gallery.appendChild(createImageElement(reader.result, uuid))
       resolve([reader.result.split(',')[1], uuid])
     }
@@ -62,8 +62,15 @@ function previewFile(file) {
   })
 }
 
+// https://stackoverflow.com/questions/105034/how-do-i-create-a-guid-uuid?page=1&tab=scoredesc#tab-top
+function uuidv4() {
+  return "10000000-1000-4000-8000-100000000000".replace(/[018]/g, c =>
+    (+c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> +c / 4).toString(16)
+  );
+}
+
 async function uploadFile(file, uuid, base64String) {
-  const url = 'upload'
+  const url = '/upload'
 
   const data = JSON.stringify({
     file: base64String,
