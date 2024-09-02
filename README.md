@@ -2,6 +2,8 @@
 
 ![Python Version](https://img.shields.io/badge/python-3.8-brightgreen.svg)
 
+https://github.com/user-attachments/assets/ea7a9727-bd98-4bfe-84e2-a003fe2a8c00
+
 Uses the [briaai/BRIA_RMBG-1.4 model](https://huggingface.co/briaai/RMBG-1.4) for image background removal.
 
 ## Dependencies 
