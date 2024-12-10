@@ -102,6 +102,7 @@ body {
   border-radius: 7px;
   width: 200px;
   text-align: center;
+  white-space: nowrap;
 }
 
 #clear-all {
